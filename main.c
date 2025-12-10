@@ -78,6 +78,8 @@ static void generate_signal_code(const gchar *base_name, gpointer user_data);
 static void hash_table_for_each(gpointer key, gpointer value,
 				gpointer user_data);
 
+static gchar *replace_hyphen_to_underscore_dup(const gchar *input);
+
 static gchar *application_id = NULL;
 static gchar *directory = NULL;
 static gchar *output_directory = NULL;
@@ -397,17 +399,17 @@ static void generate_code(GHashTable *view_binding_parser_map,
 	g_string_append_printf(output_buffer, "\n");
 	g_string_append_printf(
 		output_buffer,
-		"#define view_binding_full(widget_class, WidgetType, BindingType, binding_name, widget_name) \\\n");
+		"#define view_binding_full(widget_class, WidgetType, BindingType, binding_name, widget_name, std_widget_name) \\\n");
 	g_string_append_printf(
 		output_buffer,
-		"\tgtk_widget_class_bind_template_child_full(GTK_WIDGET_CLASS(widget_class), #widget_name, FALSE, G_STRUCT_OFFSET(WidgetType, binding_name) + G_STRUCT_OFFSET(BindingType, widget_name));\n");
+		"\tgtk_widget_class_bind_template_child_full(GTK_WIDGET_CLASS(widget_class), #widget_name, FALSE, G_STRUCT_OFFSET(WidgetType, binding_name) + G_STRUCT_OFFSET(BindingType, std_widget_name));\n");
 	g_string_append_printf(output_buffer, "\n");
 	g_string_append_printf(
 		output_buffer,
-		"#define view_binding_full_private(widget_class, WidgetType, BindingType, binding_name, widget_name) \\\n");
+		"#define view_binding_full_private(widget_class, WidgetType, BindingType, binding_name, widget_name, std_widget_name) \\\n");
 	g_string_append_printf(
 		output_buffer,
-		"\tgtk_widget_class_bind_template_child_full(GTK_WIDGET_CLASS(widget_class), #widget_name, FALSE, G_PRIVATE_OFFSET(WidgetType, binding_name) + G_STRUCT_OFFSET(BindingType, widget_name));\n");
+		"\tgtk_widget_class_bind_template_child_full(GTK_WIDGET_CLASS(widget_class), #widget_name, FALSE, G_PRIVATE_OFFSET(WidgetType, binding_name) + G_STRUCT_OFFSET(BindingType, std_widget_name));\n");
 	g_string_append_printf(output_buffer, "\n");
 	g_string_append_printf(output_buffer,
 			       "#endif /* VIEW_BINDING_INSIDE_UTILS */\n");
@@ -461,8 +463,10 @@ static void generate_object_code(const gchar *base_name, gpointer user_data)
 	for (int i = 0; i < size; i++) {
 		ClassId *class_id =
 			(ClassId *)g_list_nth_data(*class_id_list, i);
+		g_autofree gchar *underline_name = replace_hyphen_to_underscore_dup(
+			class_id->id);
 		g_string_append_printf(output_buffer, "\t%s *%s;\n",
-				       class_id->class, class_id->id);
+				       class_id->class, underline_name);
 	}
 	g_string_append_printf(output_buffer, "} %sBinding;\n",
 			       name_builder->str);
@@ -477,10 +481,12 @@ static void generate_object_code(const gchar *base_name, gpointer user_data)
 	for (int i = 0; i < size; i++) {
 		ClassId *class_id =
 			(ClassId *)g_list_nth_data(*class_id_list, i);
+		g_autofree gchar *underline_name = replace_hyphen_to_underscore_dup(
+			class_id->id);
 		g_string_append_printf(
 			output_buffer,
-			"\t\tview_binding_full(widget_class, WidgetType, %sBinding, binding_name, %s) \\\n",
-			name_builder->str, class_id->id);
+			"\t\tview_binding_full(widget_class, WidgetType, %sBinding, binding_name, %s, %s) \\\n",
+			name_builder->str, class_id->id, underline_name);
 	}
 	g_string_append_printf(output_buffer, "\t} while(0) \n");
 
@@ -494,10 +500,12 @@ static void generate_object_code(const gchar *base_name, gpointer user_data)
 	for (int i = 0; i < size; i++) {
 		ClassId *class_id =
 			(ClassId *)g_list_nth_data(*class_id_list, i);
+		g_autofree gchar *underline_name = replace_hyphen_to_underscore_dup(
+			class_id->id);
 		g_string_append_printf(
 			output_buffer,
-			"\t\tview_binding_full_private(widget_class, WidgetType, %sBinding, binding_name, %s) \\\n",
-			name_builder->str, class_id->id);
+			"\t\tview_binding_full_private(widget_class, WidgetType, %sBinding, binding_name, %s, %s) \\\n",
+			name_builder->str, class_id->id, underline_name);
 	}
 	g_string_append_printf(output_buffer, "\t} while(0) \n");
 }
@@ -519,10 +527,12 @@ static void generate_signal_code(const gchar *base_name, gpointer user_data)
 	g_string_append_printf(output_buffer, "\tdo { \\\n");
 	for (int i = 0; i < size; i++) {
 		gchar *signal = g_array_index(*signal_array, gchar *, i);
+		g_autofree gchar *underline_signal =
+			replace_hyphen_to_underscore_dup(signal);
 		g_string_append_printf(
 			output_buffer,
-			"\t\tgtk_widget_class_bind_template_callback(GTK_WIDGET_CLASS(widget_class), %s); \\\n",
-			signal);
+			"\t\tgtk_widget_class_bind_template_callback_full(GTK_WIDGET_CLASS(widget_class), \"%s\", (GCallback)%s); \\\n",
+			signal, underline_signal);
 	}
 	g_string_append_printf(output_buffer, "\t} while(0) \n");
 }
@@ -535,4 +545,16 @@ static void hash_table_for_each(gpointer key, gpointer value,
 
 	if (parser && parser->generate_code)
 		parser->generate_code(base_name, &parser->user_data);
+}
+
+static gchar *replace_hyphen_to_underscore_dup(const gchar *input)
+{
+	gchar *output = g_strdup(input);
+
+	for (gchar *p = output; *p != '\0'; p++) {
+		if (*p == '-') {
+			*p = '_';
+		}
+	}
+	return output;
 }
