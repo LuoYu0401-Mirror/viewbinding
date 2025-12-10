@@ -23,14 +23,14 @@ Create a UI definition file in XML format. For example, create a file named `win
                     </object>
                 </child>
                 <child type="end">
-                    <object class="GtkMenuButton" id="gears">
-                        <property name="direction">none</property>
-                    </object>
-                </child>
-                <child type="end">
                     <object class="GtkToggleButton" id="search">
                         <property name="sensitive">0</property>
                         <property name="icon-name">edit-find-symbolic</property>
+                    </object>
+                </child>
+                <child type="end">
+                    <object class="GtkMenuButton" id="gears">
+                        <property name="direction">none</property>
                     </object>
                 </child>
             </object>
@@ -48,8 +48,27 @@ Create a UI definition file in XML format. For example, create a file named `win
                     </object>
                 </child>
                 <child>
-                    <object class="GtkStack" id="stack">
-                        <signal name="notify::visible-child" handler="visible_child_changed"/>
+                    <object class="GtkBox" id="hbox">
+                        <child>
+                            <object class="GtkRevealer" id="sidebar">
+                                <property name="transition-type">slide-right</property>
+                                <child>
+                                    <object class="GtkScrolledWindow" id="sidebar-sw">
+                                        <property name="hscrollbar-policy">never</property>
+                                        <child>
+                                            <object class="GtkListBox" id="words">
+                                                <property name="selection-mode">none</property>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkStack" id="stack">
+                                <signal name="notify::visible-child" handler="visible_child_changed"/>
+                            </object>
+                        </child>
                     </object>
                 </child>
             </object>
@@ -74,11 +93,11 @@ then you will get a generated file named `window_viewbinidng.h` in the specified
 #ifndef VIEW_BINDING_INSIDE_UTILS
 #define VIEW_BINDING_INSIDE_UTILS
 
-#define view_binding_full(widget_class, WidgetType, BindingType, binding_name, widget_name) \
-	gtk_widget_class_bind_template_child_full(GTK_WIDGET_CLASS(widget_class), #widget_name, FALSE, G_STRUCT_OFFSET(WidgetType, binding_name) + G_STRUCT_OFFSET(BindingType, widget_name));
+#define view_binding_full(widget_class, WidgetType, BindingType, binding_name, widget_name, std_widget_name) \
+	gtk_widget_class_bind_template_child_full(GTK_WIDGET_CLASS(widget_class), #widget_name, FALSE, G_STRUCT_OFFSET(WidgetType, binding_name) + G_STRUCT_OFFSET(BindingType, std_widget_name));
 
-#define view_binding_full_private(widget_class, WidgetType, BindingType, binding_name, widget_name) \
-	gtk_widget_class_bind_template_child_full(GTK_WIDGET_CLASS(widget_class), #widget_name, FALSE, G_PRIVATE_OFFSET(WidgetType, binding_name) + G_STRUCT_OFFSET(BindingType, widget_name));
+#define view_binding_full_private(widget_class, WidgetType, BindingType, binding_name, widget_name, std_widget_name) \
+	gtk_widget_class_bind_template_child_full(GTK_WIDGET_CLASS(widget_class), #widget_name, FALSE, G_PRIVATE_OFFSET(WidgetType, binding_name) + G_STRUCT_OFFSET(BindingType, std_widget_name));
 
 #endif /* VIEW_BINDING_INSIDE_UTILS */
 
@@ -86,43 +105,55 @@ then you will get a generated file named `window_viewbinidng.h` in the specified
 typedef struct {
 	GtkHeaderBar *header;
 	GtkStackSwitcher *tabs;
-	GtkMenuButton *gears;
 	GtkToggleButton *search;
+	GtkMenuButton *gears;
 	GtkBox *content_box;
 	GtkSearchBar *searchbar;
 	GtkSearchEntry *searchentry;
+	GtkBox *hbox;
+	GtkRevealer *sidebar;
+	GtkScrolledWindow *sidebar_sw;
+	GtkListBox *words;
 	GtkStack *stack;
 } WindowBinding;
 
 #define window_view_binding(widget_class, WidgetType, binding_name) \
 	do { \
-		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, header) \
-		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, tabs) \
-		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, gears) \
-		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, search) \
-		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, content_box) \
-		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, searchbar) \
-		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, searchentry) \
-		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, stack) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, header, header) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, tabs, tabs) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, search, search) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, gears, gears) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, content_box, content_box) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, searchbar, searchbar) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, searchentry, searchentry) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, hbox, hbox) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, sidebar, sidebar) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, sidebar-sw, sidebar_sw) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, words, words) \
+		view_binding_full(widget_class, WidgetType, WindowBinding, binding_name, stack, stack) \
 	} while(0) 
 
 #define window_view_binding_private(widget_class, WidgetType, binding_name) \
 	do { \
-		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, header) \
-		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, tabs) \
-		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, gears) \
-		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, search) \
-		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, content_box) \
-		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, searchbar) \
-		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, searchentry) \
-		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, stack) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, header, header) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, tabs, tabs) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, search, search) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, gears, gears) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, content_box, content_box) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, searchbar, searchbar) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, searchentry, searchentry) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, hbox, hbox) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, sidebar, sidebar) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, sidebar-sw, sidebar_sw) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, words, words) \
+		view_binding_full_private(widget_class, WidgetType, WindowBinding, binding_name, stack, stack) \
 	} while(0) 
 
 /* Signal Handlers */
 #define window_view_binding_callback(widget_class) \
 	do { \
-		gtk_widget_class_bind_template_callback(GTK_WIDGET_CLASS(widget_class), search_text_changed); \
-		gtk_widget_class_bind_template_callback(GTK_WIDGET_CLASS(widget_class), visible_child_changed); \
+		gtk_widget_class_bind_template_callback_full(GTK_WIDGET_CLASS(widget_class), "search_text_changed", (GCallback)search_text_changed); \
+		gtk_widget_class_bind_template_callback_full(GTK_WIDGET_CLASS(widget_class), "visible_child_changed", (GCallback)visible_child_changed); \
 	} while(0) 
 
 #endif /* org_ly_view_binding_window_VIEW_BINDING_H_ */
