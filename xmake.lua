@@ -3,7 +3,7 @@
 set_project("viewbinding")
 
 -- add requirements
-add_requires("pacman::glib2", {alias = "glib2"})
+add_requires("glib-2.0", {alias = "glib2", system = true})
 
 target("viewbinding", function (target)
     add_rules("module.binary")
